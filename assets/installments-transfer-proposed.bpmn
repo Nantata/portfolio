@@ -1,0 +1,239 @@
+<?xml version='1.0' encoding='utf-8'?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="installments-transfer-proposed_Definitions" targetNamespace="https://example.invalid/portfolio-models" exporter="Project modeling pack" exporterVersion="1.0">
+  <bpmn:process id="installments-transfer-proposed" name="Подтверждённый перенос переплаты между карточками" isExecutable="false">
+    <bpmn:documentation>Предлагаемая доработка, не реализована. Одна операция внутри одного договора. Реальные поступления по карточкам не переписываются. Хранилище журнала ещё не выбрано; отдельный смарт-процесс Bitrix24 — один из вариантов, не установленная таблица. Порядок выбора получателя и доступные REST-методы требуют согласования. Нет общей атомарной транзакции между несколькими REST-записями: необходимы идемпотентность и восстановление.</bpmn:documentation>
+    <bpmn:laneSet id="installments-transfer-proposed_Lanes">
+      <bpmn:lane id="installments-transfer-proposed_L0" name="РОП">
+        <bpmn:flowNodeRef>t_start</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>t_choose</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>t_confirm</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>t_no</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="installments-transfer-proposed_L1" name="Приложение">
+        <bpmn:flowNodeRef>t_check</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>t_valid</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>t_reconcile</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>t_open</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="installments-transfer-proposed_L2" name="Bitrix24 и журнал операций">
+        <bpmn:flowNodeRef>t_pending</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>t_apply</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>t_ok</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>t_commit</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>t_end</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="t_start" name="Нужно перераспределение">
+      <bpmn:outgoing>installments-transfer-proposed_F1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:userTask id="t_choose" name="Выбрать источник, получателя, сумму и комментарий">
+      <bpmn:incoming>installments-transfer-proposed_F1</bpmn:incoming>
+      <bpmn:outgoing>installments-transfer-proposed_F2</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="t_confirm" name="Подтвердить перенос РОПом">
+      <bpmn:documentation>Приложение не записывает предложенный перенос автоматически.</bpmn:documentation>
+      <bpmn:incoming>installments-transfer-proposed_F2</bpmn:incoming>
+      <bpmn:outgoing>installments-transfer-proposed_F3</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:serviceTask id="t_check" name="Перечитать обе карточки и проверить условия">
+      <bpmn:documentation>Права РОПа; одна сделка; разные карточки; сумма &gt; 0; достаточно доступной переплаты; повтор запроса не создаёт новую операцию. Проверка актуальных данных и защита от конкурентной операции обязательны.</bpmn:documentation>
+      <bpmn:incoming>installments-transfer-proposed_F3</bpmn:incoming>
+      <bpmn:outgoing>installments-transfer-proposed_F4</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="t_valid" name="Проверка пройдена?" gatewayDirection="Diverging" default="installments-transfer-proposed_F5">
+      <bpmn:incoming>installments-transfer-proposed_F4</bpmn:incoming>
+      <bpmn:outgoing>installments-transfer-proposed_F5</bpmn:outgoing>
+      <bpmn:outgoing>installments-transfer-proposed_F6</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:endEvent id="t_no" name="Отказ; карточки не изменены">
+      <bpmn:incoming>installments-transfer-proposed_F5</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:serviceTask id="t_pending" name="Создать операцию в ожидании с уникальным ID">
+      <bpmn:documentation>Зафиксировать исходное состояние, источник, получателя, сумму, автора и комментарий. Способ надёжного ограничения конкурентной записи должен быть определён при реализации.</bpmn:documentation>
+      <bpmn:incoming>installments-transfer-proposed_F6</bpmn:incoming>
+      <bpmn:outgoing>installments-transfer-proposed_F7</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="t_apply" name="Записать зачёт и проверить обе карточки">
+      <bpmn:documentation>Входящий/исходящий зачёт отделены от факта оплаты. Один ID операции для повторов. При частичной записи нельзя объявлять успех.</bpmn:documentation>
+      <bpmn:incoming>installments-transfer-proposed_F7</bpmn:incoming>
+      <bpmn:outgoing>installments-transfer-proposed_F8</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="t_ok" name="Обе записи подтверждены?" gatewayDirection="Diverging" default="installments-transfer-proposed_F11">
+      <bpmn:incoming>installments-transfer-proposed_F8</bpmn:incoming>
+      <bpmn:outgoing>installments-transfer-proposed_F9</bpmn:outgoing>
+      <bpmn:outgoing>installments-transfer-proposed_F11</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="t_commit" name="Завершить журнал; пересчитать статусы">
+      <bpmn:documentation>Сумма входящих зачётов равна сумме исходящих. Факт оплаты сохранён. Задачу проверки закрывать только после подтверждённой операции.</bpmn:documentation>
+      <bpmn:incoming>installments-transfer-proposed_F9</bpmn:incoming>
+      <bpmn:outgoing>installments-transfer-proposed_F10</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="t_end" name="Перенос подтверждён">
+      <bpmn:incoming>installments-transfer-proposed_F10</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:serviceTask id="t_reconcile" name="Зафиксировать ошибку; восстановить согласованность">
+      <bpmn:documentation>Идемпотентный повтор или компенсирующая операция по выбранной реализации. Не смешивать сумму ожидания с подтверждённым зачётом.</bpmn:documentation>
+      <bpmn:incoming>installments-transfer-proposed_F11</bpmn:incoming>
+      <bpmn:outgoing>installments-transfer-proposed_F12</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="t_open" name="Требуется восстановление">
+      <bpmn:incoming>installments-transfer-proposed_F12</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="installments-transfer-proposed_F1" sourceRef="t_start" targetRef="t_choose" name="" />
+    <bpmn:sequenceFlow id="installments-transfer-proposed_F2" sourceRef="t_choose" targetRef="t_confirm" name="" />
+    <bpmn:sequenceFlow id="installments-transfer-proposed_F3" sourceRef="t_confirm" targetRef="t_check" name="" />
+    <bpmn:sequenceFlow id="installments-transfer-proposed_F4" sourceRef="t_check" targetRef="t_valid" name="" />
+    <bpmn:sequenceFlow id="installments-transfer-proposed_F5" sourceRef="t_valid" targetRef="t_no" name="Нет" />
+    <bpmn:sequenceFlow id="installments-transfer-proposed_F6" sourceRef="t_valid" targetRef="t_pending" name="Да">
+      <bpmn:conditionExpression>validationSucceeded = true</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="installments-transfer-proposed_F7" sourceRef="t_pending" targetRef="t_apply" name="" />
+    <bpmn:sequenceFlow id="installments-transfer-proposed_F8" sourceRef="t_apply" targetRef="t_ok" name="" />
+    <bpmn:sequenceFlow id="installments-transfer-proposed_F9" sourceRef="t_ok" targetRef="t_commit" name="Да">
+      <bpmn:conditionExpression>bothWritesVerified = true</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="installments-transfer-proposed_F10" sourceRef="t_commit" targetRef="t_end" name="" />
+    <bpmn:sequenceFlow id="installments-transfer-proposed_F11" sourceRef="t_ok" targetRef="t_reconcile" name="Нет" />
+    <bpmn:sequenceFlow id="installments-transfer-proposed_F12" sourceRef="t_reconcile" targetRef="t_open" name="" />
+  </bpmn:process>
+  <bpmn:collaboration id="installments-transfer-proposed_Collaboration">
+    <bpmn:participant id="installments-transfer-proposed_Pool" name="Предлагаемая доработка, не реализована" processRef="installments-transfer-proposed" />
+  </bpmn:collaboration>
+  <bpmndi:BPMNDiagram id="installments-transfer-proposed_Diagram" name="Подтверждённый перенос переплаты между карточками">
+    <bpmndi:BPMNPlane id="installments-transfer-proposed_Plane" bpmnElement="installments-transfer-proposed_Collaboration">
+      <bpmndi:BPMNShape id="installments-transfer-proposed_PoolDI" bpmnElement="installments-transfer-proposed_Pool" isHorizontal="true">
+        <dc:Bounds x="30" y="95" width="2280" height="480" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="installments-transfer-proposed_L0DI" bpmnElement="installments-transfer-proposed_L0" isHorizontal="true">
+        <dc:Bounds x="60" y="95" width="2250" height="160" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="installments-transfer-proposed_L1DI" bpmnElement="installments-transfer-proposed_L1" isHorizontal="true">
+        <dc:Bounds x="60" y="255" width="2250" height="160" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="installments-transfer-proposed_L2DI" bpmnElement="installments-transfer-proposed_L2" isHorizontal="true">
+        <dc:Bounds x="60" y="415" width="2250" height="160" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="t_start_DI" bpmnElement="t_start">
+        <dc:Bounds x="122.0" y="157.0" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="72.0" y="201.0" width="136" height="42" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="t_choose_DI" bpmnElement="t_choose">
+        <dc:Bounds x="260.0" y="137.0" width="180" height="76" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="t_confirm_DI" bpmnElement="t_confirm">
+        <dc:Bounds x="530.0" y="137.0" width="180" height="76" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="t_check_DI" bpmnElement="t_check">
+        <dc:Bounds x="810.0" y="297.0" width="180" height="76" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="t_valid_DI" bpmnElement="t_valid">
+        <dc:Bounds x="1105.0" y="310.0" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1055.0" y="368.0" width="150" height="42" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="t_no_DI" bpmnElement="t_no">
+        <dc:Bounds x="1112.0" y="157.0" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1062.0" y="201.0" width="136" height="42" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="t_pending_DI" bpmnElement="t_pending">
+        <dc:Bounds x="1300.0" y="457.0" width="180" height="76" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="t_apply_DI" bpmnElement="t_apply">
+        <dc:Bounds x="1550.0" y="457.0" width="180" height="76" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="t_ok_DI" bpmnElement="t_ok">
+        <dc:Bounds x="1855.0" y="470.0" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1805.0" y="528.0" width="150" height="42" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="t_commit_DI" bpmnElement="t_commit">
+        <dc:Bounds x="1990.0" y="457.0" width="180" height="76" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="t_end_DI" bpmnElement="t_end">
+        <dc:Bounds x="2222.0" y="477.0" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2172.0" y="521.0" width="136" height="42" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="t_reconcile_DI" bpmnElement="t_reconcile">
+        <dc:Bounds x="1780.0" y="297.0" width="180" height="76" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="t_open_DI" bpmnElement="t_open">
+        <dc:Bounds x="2092.0" y="317.0" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2042.0" y="361.0" width="136" height="42" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="installments-transfer-proposed_F1_DI" bpmnElement="installments-transfer-proposed_F1">
+        <di:waypoint x="158.0" y="175.0" />
+        <di:waypoint x="260.0" y="175.0" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="installments-transfer-proposed_F2_DI" bpmnElement="installments-transfer-proposed_F2">
+        <di:waypoint x="440.0" y="175.0" />
+        <di:waypoint x="530.0" y="175.0" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="installments-transfer-proposed_F3_DI" bpmnElement="installments-transfer-proposed_F3">
+        <di:waypoint x="710.0" y="175.0" />
+        <di:waypoint x="760.0" y="175.0" />
+        <di:waypoint x="760.0" y="335.0" />
+        <di:waypoint x="810.0" y="335.0" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="installments-transfer-proposed_F4_DI" bpmnElement="installments-transfer-proposed_F4">
+        <di:waypoint x="990.0" y="335.0" />
+        <di:waypoint x="1105.0" y="335.0" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="installments-transfer-proposed_F5_DI" bpmnElement="installments-transfer-proposed_F5">
+        <di:waypoint x="1130" y="310" />
+        <di:waypoint x="1130" y="193" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1133" y="284" width="120" height="24" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="installments-transfer-proposed_F6_DI" bpmnElement="installments-transfer-proposed_F6">
+        <di:waypoint x="1155.0" y="335.0" />
+        <di:waypoint x="1227.5" y="335.0" />
+        <di:waypoint x="1227.5" y="495.0" />
+        <di:waypoint x="1300.0" y="495.0" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1158.0" y="309.0" width="120" height="24" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="installments-transfer-proposed_F7_DI" bpmnElement="installments-transfer-proposed_F7">
+        <di:waypoint x="1480.0" y="495.0" />
+        <di:waypoint x="1550.0" y="495.0" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="installments-transfer-proposed_F8_DI" bpmnElement="installments-transfer-proposed_F8">
+        <di:waypoint x="1730.0" y="495.0" />
+        <di:waypoint x="1855.0" y="495.0" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="installments-transfer-proposed_F9_DI" bpmnElement="installments-transfer-proposed_F9">
+        <di:waypoint x="1905.0" y="495.0" />
+        <di:waypoint x="1990.0" y="495.0" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1908.0" y="469.0" width="120" height="24" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="installments-transfer-proposed_F10_DI" bpmnElement="installments-transfer-proposed_F10">
+        <di:waypoint x="2170.0" y="495.0" />
+        <di:waypoint x="2222.0" y="495.0" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="installments-transfer-proposed_F11_DI" bpmnElement="installments-transfer-proposed_F11">
+        <di:waypoint x="1880" y="470" />
+        <di:waypoint x="1880" y="373" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1883" y="444" width="120" height="24" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="installments-transfer-proposed_F12_DI" bpmnElement="installments-transfer-proposed_F12">
+        <di:waypoint x="1960.0" y="335.0" />
+        <di:waypoint x="2092.0" y="335.0" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

@@ -1,0 +1,336 @@
+<?xml version='1.0' encoding='utf-8'?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="contracts-main_Definitions" targetNamespace="https://example.invalid/portfolio-models" exporter="Project modeling pack" exporterVersion="1.0">
+  <bpmn:process id="contracts-main" name="Согласование договора от заявки до архива" isExecutable="false">
+    <bpmn:documentation>Проектная модель по требованиям. Модель верхнего уровня. Полная серверная реализация не подтверждена. Решения принимает пользователь в карточке, а не закрытием задачи. Перед запуском допустима только персональная задача директору. Внешние документы хранятся по ссылкам. Детали повторного контроля и параллельной группы вынесены в отдельные модели. Неисполняемая спецификация, не шаблон для загрузки в Битрикс24.</bpmn:documentation>
+    <bpmn:laneSet id="contracts-main_Lanes">
+      <bpmn:lane id="contracts-main_L0" name="Инициатор">
+        <bpmn:flowNodeRef>c_start</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>c_create</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="contracts-main_L1" name="Генеральный директор">
+        <bpmn:flowNodeRef>c_permission</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>c_launch</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>c_no</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="contracts-main_L2" name="Приложение">
+        <bpmn:flowNodeRef>c_snapshot</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>c_round</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="contracts-main_L3" name="Участники маршрута">
+        <bpmn:flowNodeRef>c_route</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>c_repeat</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="contracts-main_L4" name="Юрист">
+        <bpmn:flowNodeRef>c_prepare</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>c_pdf</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="contracts-main_L5" name="Ответственный по договору">
+        <bpmn:flowNodeRef>c_send</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>c_response</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>c_changes</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>c_sign</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="contracts-main_L6" name="Секретарь или архивариус">
+        <bpmn:flowNodeRef>c_archive</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>c_end</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="c_start" name="Нужен договор">
+      <bpmn:outgoing>contracts-main_F1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:userTask id="c_create" name="Заполнить карточку договора">
+      <bpmn:documentation>Направление, тип, вариант подготовки, проект, контрагент, инициатор, ответственный, срок и ссылки.</bpmn:documentation>
+      <bpmn:incoming>contracts-main_F1</bpmn:incoming>
+      <bpmn:outgoing>contracts-main_F2</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="c_permission" name="Решить, запускать ли договор">
+      <bpmn:documentation>Персональная задача ГД; общий чат и задачи маршрута пока не создаются. Отложить означает остаться в ожидании решения.</bpmn:documentation>
+      <bpmn:incoming>contracts-main_F2</bpmn:incoming>
+      <bpmn:outgoing>contracts-main_F3</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="c_launch" name="Запустить?" gatewayDirection="Diverging" default="contracts-main_F4">
+      <bpmn:incoming>contracts-main_F3</bpmn:incoming>
+      <bpmn:outgoing>contracts-main_F4</bpmn:outgoing>
+      <bpmn:outgoing>contracts-main_F5</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:endEvent id="c_no" name="Не запущен">
+      <bpmn:incoming>contracts-main_F4</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:serviceTask id="c_snapshot" name="Зафиксировать маршрут; создать чат и первые задачи">
+      <bpmn:documentation>Только после решения Запустить. Снимок конкретных людей и этапов не меняется вместе с шаблоном. Сбой REST должен отслеживаться отдельно и не создавать дубликаты при повторе.</bpmn:documentation>
+      <bpmn:incoming>contracts-main_F5</bpmn:incoming>
+      <bpmn:outgoing>contracts-main_F6</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:userTask id="c_prepare" name="Подготовить рабочую версию">
+      <bpmn:documentation>Готовый документ или подготовка с нуля — согласно выбранному варианту.</bpmn:documentation>
+      <bpmn:incoming>contracts-main_F6</bpmn:incoming>
+      <bpmn:outgoing>contracts-main_F7</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:callActivity id="c_route" name="Пройти согласование по снимку маршрута">
+      <bpmn:documentation>Вызываемая процедура зависит от направления. Параллельная строительная группа — contracts-parallel.bpmn. Возврат с замечаниями создаёт новое исполнение этапа. Возврат ГД проходит обязательный контроль — contracts-review.bpmn. calledElement не привязан к движку.</bpmn:documentation>
+      <bpmn:incoming>contracts-main_F7</bpmn:incoming>
+      <bpmn:outgoing>contracts-main_F8</bpmn:outgoing>
+    </bpmn:callActivity>
+    <bpmn:userTask id="c_pdf" name="Разместить ссылку на согласованную PDF-версию">
+      <bpmn:documentation>Сохраняются версия, дата, автор, комментарий; исходный документ не перезаписывается в истории.</bpmn:documentation>
+      <bpmn:incoming>contracts-main_F8</bpmn:incoming>
+      <bpmn:outgoing>contracts-main_F9</bpmn:outgoing>
+      <bpmn:incoming>contracts-main_F14</bpmn:incoming>
+    </bpmn:userTask>
+    <bpmn:userTask id="c_send" name="Отправить PDF контрагенту">
+      <bpmn:documentation>Отправляет ответственный по договору, который может отличаться от инициатора. Канал отправки не определён в требованиях.</bpmn:documentation>
+      <bpmn:incoming>contracts-main_F9</bpmn:incoming>
+      <bpmn:outgoing>contracts-main_F10</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="c_response" name="Зафиксировать ответ контрагента">
+      <bpmn:documentation>Результат внешнего общения вносится ответственным в карточку; BPMN не моделирует внутренний процесс контрагента.</bpmn:documentation>
+      <bpmn:incoming>contracts-main_F10</bpmn:incoming>
+      <bpmn:outgoing>contracts-main_F11</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="c_changes" name="Есть правки?" gatewayDirection="Diverging" default="contracts-main_F15">
+      <bpmn:incoming>contracts-main_F11</bpmn:incoming>
+      <bpmn:outgoing>contracts-main_F12</bpmn:outgoing>
+      <bpmn:outgoing>contracts-main_F15</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="c_round" name="Открыть новый раунд и сохранить правки">
+      <bpmn:incoming>contracts-main_F12</bpmn:incoming>
+      <bpmn:outgoing>contracts-main_F13</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:callActivity id="c_repeat" name="Юрист → бухгалтер → ГД → юрист">
+      <bpmn:documentation>Детальная процедура — contracts-review.bpmn. После неё юрист размещает новую PDF-версию; количество раундов не ограничено.</bpmn:documentation>
+      <bpmn:incoming>contracts-main_F13</bpmn:incoming>
+      <bpmn:outgoing>contracts-main_F14</bpmn:outgoing>
+    </bpmn:callActivity>
+    <bpmn:userTask id="c_sign" name="Зафиксировать обе подписи">
+      <bpmn:documentation>Статус На подписании. Архивация разрешена только после подписания обеими сторонами. Способ подписи — вне границ модели.</bpmn:documentation>
+      <bpmn:incoming>contracts-main_F15</bpmn:incoming>
+      <bpmn:outgoing>contracts-main_F16</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="c_archive" name="Архивировать подписанный договор">
+      <bpmn:documentation>Задача секретарю/архивариусу. Сохранить ссылки на подписанную и архивную версии; далее Завершен.</bpmn:documentation>
+      <bpmn:incoming>contracts-main_F16</bpmn:incoming>
+      <bpmn:outgoing>contracts-main_F17</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:endEvent id="c_end" name="Завершён">
+      <bpmn:incoming>contracts-main_F17</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="contracts-main_F1" sourceRef="c_start" targetRef="c_create" name="" />
+    <bpmn:sequenceFlow id="contracts-main_F2" sourceRef="c_create" targetRef="c_permission" name="" />
+    <bpmn:sequenceFlow id="contracts-main_F3" sourceRef="c_permission" targetRef="c_launch" name="" />
+    <bpmn:sequenceFlow id="contracts-main_F4" sourceRef="c_launch" targetRef="c_no" name="Нет" />
+    <bpmn:sequenceFlow id="contracts-main_F5" sourceRef="c_launch" targetRef="c_snapshot" name="Да">
+      <bpmn:conditionExpression>startDecision = "start"</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="contracts-main_F6" sourceRef="c_snapshot" targetRef="c_prepare" name="" />
+    <bpmn:sequenceFlow id="contracts-main_F7" sourceRef="c_prepare" targetRef="c_route" name="" />
+    <bpmn:sequenceFlow id="contracts-main_F8" sourceRef="c_route" targetRef="c_pdf" name="" />
+    <bpmn:sequenceFlow id="contracts-main_F9" sourceRef="c_pdf" targetRef="c_send" name="" />
+    <bpmn:sequenceFlow id="contracts-main_F10" sourceRef="c_send" targetRef="c_response" name="" />
+    <bpmn:sequenceFlow id="contracts-main_F11" sourceRef="c_response" targetRef="c_changes" name="" />
+    <bpmn:sequenceFlow id="contracts-main_F12" sourceRef="c_changes" targetRef="c_round" name="Да">
+      <bpmn:conditionExpression>counterpartyHasChanges = true</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="contracts-main_F13" sourceRef="c_round" targetRef="c_repeat" name="" />
+    <bpmn:sequenceFlow id="contracts-main_F14" sourceRef="c_repeat" targetRef="c_pdf" name="" />
+    <bpmn:sequenceFlow id="contracts-main_F15" sourceRef="c_changes" targetRef="c_sign" name="Нет" />
+    <bpmn:sequenceFlow id="contracts-main_F16" sourceRef="c_sign" targetRef="c_archive" name="" />
+    <bpmn:sequenceFlow id="contracts-main_F17" sourceRef="c_archive" targetRef="c_end" name="" />
+  </bpmn:process>
+  <bpmn:collaboration id="contracts-main_Collaboration">
+    <bpmn:participant id="contracts-main_Pool" name="Проектная модель по требованиям" processRef="contracts-main" />
+  </bpmn:collaboration>
+  <bpmndi:BPMNDiagram id="contracts-main_Diagram" name="Согласование договора от заявки до архива">
+    <bpmndi:BPMNPlane id="contracts-main_Plane" bpmnElement="contracts-main_Collaboration">
+      <bpmndi:BPMNShape id="contracts-main_PoolDI" bpmnElement="contracts-main_Pool" isHorizontal="true">
+        <dc:Bounds x="30" y="95" width="3100" height="1120" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="contracts-main_L0DI" bpmnElement="contracts-main_L0" isHorizontal="true">
+        <dc:Bounds x="60" y="95" width="3070" height="160" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="contracts-main_L1DI" bpmnElement="contracts-main_L1" isHorizontal="true">
+        <dc:Bounds x="60" y="255" width="3070" height="160" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="contracts-main_L2DI" bpmnElement="contracts-main_L2" isHorizontal="true">
+        <dc:Bounds x="60" y="415" width="3070" height="160" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="contracts-main_L3DI" bpmnElement="contracts-main_L3" isHorizontal="true">
+        <dc:Bounds x="60" y="575" width="3070" height="160" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="contracts-main_L4DI" bpmnElement="contracts-main_L4" isHorizontal="true">
+        <dc:Bounds x="60" y="735" width="3070" height="160" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="contracts-main_L5DI" bpmnElement="contracts-main_L5" isHorizontal="true">
+        <dc:Bounds x="60" y="895" width="3070" height="160" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="contracts-main_L6DI" bpmnElement="contracts-main_L6" isHorizontal="true">
+        <dc:Bounds x="60" y="1055" width="3070" height="160" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="c_start_DI" bpmnElement="c_start">
+        <dc:Bounds x="117.0" y="157.0" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="67.0" y="201.0" width="136" height="42" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="c_create_DI" bpmnElement="c_create">
+        <dc:Bounds x="210.0" y="137.0" width="180" height="76" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="c_permission_DI" bpmnElement="c_permission">
+        <dc:Bounds x="450.0" y="297.0" width="180" height="76" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="c_launch_DI" bpmnElement="c_launch">
+        <dc:Bounds x="715.0" y="310.0" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="665.0" y="368.0" width="150" height="42" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="c_no_DI" bpmnElement="c_no">
+        <dc:Bounds x="932.0" y="317.0" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="882.0" y="361.0" width="136" height="42" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="c_snapshot_DI" bpmnElement="c_snapshot">
+        <dc:Bounds x="860.0" y="457.0" width="180" height="76" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="c_prepare_DI" bpmnElement="c_prepare">
+        <dc:Bounds x="1110.0" y="777.0" width="180" height="76" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="c_route_DI" bpmnElement="c_route">
+        <dc:Bounds x="1360.0" y="617.0" width="180" height="76" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="c_pdf_DI" bpmnElement="c_pdf">
+        <dc:Bounds x="1610.0" y="777.0" width="180" height="76" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="c_send_DI" bpmnElement="c_send">
+        <dc:Bounds x="1860.0" y="937.0" width="180" height="76" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="c_response_DI" bpmnElement="c_response">
+        <dc:Bounds x="2100.0" y="937.0" width="180" height="76" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="c_changes_DI" bpmnElement="c_changes">
+        <dc:Bounds x="2375.0" y="950.0" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2325.0" y="1008.0" width="150" height="42" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="c_round_DI" bpmnElement="c_round">
+        <dc:Bounds x="2310.0" y="457.0" width="180" height="76" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="c_repeat_DI" bpmnElement="c_repeat">
+        <dc:Bounds x="2060.0" y="617.0" width="180" height="76" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="c_sign_DI" bpmnElement="c_sign">
+        <dc:Bounds x="2560.0" y="937.0" width="180" height="76" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="c_archive_DI" bpmnElement="c_archive">
+        <dc:Bounds x="2810.0" y="1097.0" width="180" height="76" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="c_end_DI" bpmnElement="c_end">
+        <dc:Bounds x="3052.0" y="1117.0" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="3002.0" y="1161.0" width="136" height="42" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="contracts-main_F1_DI" bpmnElement="contracts-main_F1">
+        <di:waypoint x="153.0" y="175.0" />
+        <di:waypoint x="210.0" y="175.0" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="contracts-main_F2_DI" bpmnElement="contracts-main_F2">
+        <di:waypoint x="390.0" y="175.0" />
+        <di:waypoint x="420.0" y="175.0" />
+        <di:waypoint x="420.0" y="335.0" />
+        <di:waypoint x="450.0" y="335.0" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="contracts-main_F3_DI" bpmnElement="contracts-main_F3">
+        <di:waypoint x="630.0" y="335.0" />
+        <di:waypoint x="715.0" y="335.0" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="contracts-main_F4_DI" bpmnElement="contracts-main_F4">
+        <di:waypoint x="740" y="310" />
+        <di:waypoint x="740" y="276" />
+        <di:waypoint x="950" y="276" />
+        <di:waypoint x="950" y="317" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="743" y="284" width="120" height="24" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="contracts-main_F5_DI" bpmnElement="contracts-main_F5">
+        <di:waypoint x="765.0" y="335.0" />
+        <di:waypoint x="812.5" y="335.0" />
+        <di:waypoint x="812.5" y="495.0" />
+        <di:waypoint x="860.0" y="495.0" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="768.0" y="309.0" width="120" height="24" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="contracts-main_F6_DI" bpmnElement="contracts-main_F6">
+        <di:waypoint x="1040.0" y="495.0" />
+        <di:waypoint x="1075.0" y="495.0" />
+        <di:waypoint x="1075.0" y="815.0" />
+        <di:waypoint x="1110.0" y="815.0" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="contracts-main_F7_DI" bpmnElement="contracts-main_F7">
+        <di:waypoint x="1290.0" y="815.0" />
+        <di:waypoint x="1325.0" y="815.0" />
+        <di:waypoint x="1325.0" y="655.0" />
+        <di:waypoint x="1360.0" y="655.0" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="contracts-main_F8_DI" bpmnElement="contracts-main_F8">
+        <di:waypoint x="1540.0" y="655.0" />
+        <di:waypoint x="1575.0" y="655.0" />
+        <di:waypoint x="1575.0" y="815.0" />
+        <di:waypoint x="1610.0" y="815.0" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="contracts-main_F9_DI" bpmnElement="contracts-main_F9">
+        <di:waypoint x="1790.0" y="815.0" />
+        <di:waypoint x="1825.0" y="815.0" />
+        <di:waypoint x="1825.0" y="975.0" />
+        <di:waypoint x="1860.0" y="975.0" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="contracts-main_F10_DI" bpmnElement="contracts-main_F10">
+        <di:waypoint x="2040.0" y="975.0" />
+        <di:waypoint x="2100.0" y="975.0" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="contracts-main_F11_DI" bpmnElement="contracts-main_F11">
+        <di:waypoint x="2280.0" y="975.0" />
+        <di:waypoint x="2375.0" y="975.0" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="contracts-main_F12_DI" bpmnElement="contracts-main_F12">
+        <di:waypoint x="2400" y="950" />
+        <di:waypoint x="2400" y="533" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2403" y="924" width="120" height="24" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="contracts-main_F13_DI" bpmnElement="contracts-main_F13">
+        <di:waypoint x="2310.0" y="495.0" />
+        <di:waypoint x="2275.0" y="495.0" />
+        <di:waypoint x="2275.0" y="655.0" />
+        <di:waypoint x="2240.0" y="655.0" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="contracts-main_F14_DI" bpmnElement="contracts-main_F14">
+        <di:waypoint x="2060" y="655" />
+        <di:waypoint x="2020" y="655" />
+        <di:waypoint x="2020" y="815" />
+        <di:waypoint x="1790" y="815" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="contracts-main_F15_DI" bpmnElement="contracts-main_F15">
+        <di:waypoint x="2425.0" y="975.0" />
+        <di:waypoint x="2560.0" y="975.0" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2428.0" y="949.0" width="120" height="24" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="contracts-main_F16_DI" bpmnElement="contracts-main_F16">
+        <di:waypoint x="2740.0" y="975.0" />
+        <di:waypoint x="2775.0" y="975.0" />
+        <di:waypoint x="2775.0" y="1135.0" />
+        <di:waypoint x="2810.0" y="1135.0" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="contracts-main_F17_DI" bpmnElement="contracts-main_F17">
+        <di:waypoint x="2990.0" y="1135.0" />
+        <di:waypoint x="3052.0" y="1135.0" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

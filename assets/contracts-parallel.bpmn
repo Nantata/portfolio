@@ -1,0 +1,203 @@
+<?xml version='1.0' encoding='utf-8'?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="contracts-parallel_Definitions" targetNamespace="https://example.invalid/portfolio-models" exporter="Project modeling pack" exporterVersion="1.0">
+  <bpmn:process id="contracts-parallel" name="Параллельное согласование строительного направления" isExecutable="false">
+    <bpmn:documentation>Проектная модель по требованиям. Технический заказчик и руководитель начинают одновременно. Технических представителей обычно 3–4, число берётся из снимка маршрута. Многоэкземплярная параллельная задача ждёт всех назначенных представителей. Модель показывает завершение группы после решений всех, затем общий исход. Доработка и повтор группы — предложенная детализация; точку возврата необходимо подтвердить.</bpmn:documentation>
+    <bpmn:laneSet id="contracts-parallel_Lanes">
+      <bpmn:lane id="contracts-parallel_L0" name="Приложение">
+        <bpmn:flowNodeRef>p_start</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>p_merge</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>p_split</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>p_join</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>p_ok</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>p_end</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="contracts-parallel_L1" name="Представители технического заказчика">
+        <bpmn:flowNodeRef>technical</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="contracts-parallel_L2" name="Руководитель направления или проекта">
+        <bpmn:flowNodeRef>p_manager</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="contracts-parallel_L3" name="Исполнитель правок">
+        <bpmn:flowNodeRef>p_fix</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="p_start" name="Этап группы активирован">
+      <bpmn:outgoing>contracts-parallel_F1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:exclusiveGateway id="p_merge" name="Начать проверку" gatewayDirection="Converging">
+      <bpmn:incoming>contracts-parallel_F1</bpmn:incoming>
+      <bpmn:outgoing>contracts-parallel_F2</bpmn:outgoing>
+      <bpmn:incoming>contracts-parallel_F10</bpmn:incoming>
+    </bpmn:exclusiveGateway>
+    <bpmn:parallelGateway id="p_split" name="Запустить вместе" gatewayDirection="Diverging">
+      <bpmn:incoming>contracts-parallel_F2</bpmn:incoming>
+      <bpmn:outgoing>contracts-parallel_F3</bpmn:outgoing>
+      <bpmn:outgoing>contracts-parallel_F4</bpmn:outgoing>
+    </bpmn:parallelGateway>
+    <bpmn:userTask id="technical" name="Проверить договор всеми представителями">
+      <bpmn:documentation>isSequential=false; technicalReviewerCount определяется снимком маршрута. Нет раннего условия completionCondition: завершение после всех экземпляров.</bpmn:documentation>
+      <bpmn:incoming>contracts-parallel_F3</bpmn:incoming>
+      <bpmn:outgoing>contracts-parallel_F5</bpmn:outgoing>
+      <bpmn:multiInstanceLoopCharacteristics isSequential="false">
+        <bpmn:loopCardinality>technicalReviewerCount</bpmn:loopCardinality>
+      </bpmn:multiInstanceLoopCharacteristics>
+    </bpmn:userTask>
+    <bpmn:userTask id="p_manager" name="Проверить договор руководителю">
+      <bpmn:incoming>contracts-parallel_F4</bpmn:incoming>
+      <bpmn:outgoing>contracts-parallel_F6</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:parallelGateway id="p_join" name="Дождаться всех" gatewayDirection="Converging">
+      <bpmn:incoming>contracts-parallel_F5</bpmn:incoming>
+      <bpmn:incoming>contracts-parallel_F6</bpmn:incoming>
+      <bpmn:outgoing>contracts-parallel_F7</bpmn:outgoing>
+    </bpmn:parallelGateway>
+    <bpmn:exclusiveGateway id="p_ok" name="Все согласовали?" gatewayDirection="Diverging" default="contracts-parallel_F9">
+      <bpmn:incoming>contracts-parallel_F7</bpmn:incoming>
+      <bpmn:outgoing>contracts-parallel_F8</bpmn:outgoing>
+      <bpmn:outgoing>contracts-parallel_F9</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:endEvent id="p_end" name="Группа согласовала">
+      <bpmn:incoming>contracts-parallel_F8</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:userTask id="p_fix" name="Устранить замечания группы">
+      <bpmn:documentation>Детализация предлагаемого возврата, а не подтверждённое поведение сервера.</bpmn:documentation>
+      <bpmn:incoming>contracts-parallel_F9</bpmn:incoming>
+      <bpmn:outgoing>contracts-parallel_F10</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:sequenceFlow id="contracts-parallel_F1" sourceRef="p_start" targetRef="p_merge" name="" />
+    <bpmn:sequenceFlow id="contracts-parallel_F2" sourceRef="p_merge" targetRef="p_split" name="" />
+    <bpmn:sequenceFlow id="contracts-parallel_F3" sourceRef="p_split" targetRef="technical" name="" />
+    <bpmn:sequenceFlow id="contracts-parallel_F4" sourceRef="p_split" targetRef="p_manager" name="" />
+    <bpmn:sequenceFlow id="contracts-parallel_F5" sourceRef="technical" targetRef="p_join" name="" />
+    <bpmn:sequenceFlow id="contracts-parallel_F6" sourceRef="p_manager" targetRef="p_join" name="" />
+    <bpmn:sequenceFlow id="contracts-parallel_F7" sourceRef="p_join" targetRef="p_ok" name="" />
+    <bpmn:sequenceFlow id="contracts-parallel_F8" sourceRef="p_ok" targetRef="p_end" name="Да">
+      <bpmn:conditionExpression>allDecisionsApproved = true</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="contracts-parallel_F9" sourceRef="p_ok" targetRef="p_fix" name="Нет" />
+    <bpmn:sequenceFlow id="contracts-parallel_F10" sourceRef="p_fix" targetRef="p_merge" name="" />
+  </bpmn:process>
+  <bpmn:collaboration id="contracts-parallel_Collaboration">
+    <bpmn:participant id="contracts-parallel_Pool" name="Проектная модель по требованиям" processRef="contracts-parallel" />
+  </bpmn:collaboration>
+  <bpmndi:BPMNDiagram id="contracts-parallel_Diagram" name="Параллельное согласование строительного направления">
+    <bpmndi:BPMNPlane id="contracts-parallel_Plane" bpmnElement="contracts-parallel_Collaboration">
+      <bpmndi:BPMNShape id="contracts-parallel_PoolDI" bpmnElement="contracts-parallel_Pool" isHorizontal="true">
+        <dc:Bounds x="30" y="95" width="1640" height="640" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="contracts-parallel_L0DI" bpmnElement="contracts-parallel_L0" isHorizontal="true">
+        <dc:Bounds x="60" y="95" width="1610" height="160" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="contracts-parallel_L1DI" bpmnElement="contracts-parallel_L1" isHorizontal="true">
+        <dc:Bounds x="60" y="255" width="1610" height="160" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="contracts-parallel_L2DI" bpmnElement="contracts-parallel_L2" isHorizontal="true">
+        <dc:Bounds x="60" y="415" width="1610" height="160" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="contracts-parallel_L3DI" bpmnElement="contracts-parallel_L3" isHorizontal="true">
+        <dc:Bounds x="60" y="575" width="1610" height="160" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="p_start_DI" bpmnElement="p_start">
+        <dc:Bounds x="122.0" y="157.0" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="72.0" y="201.0" width="136" height="42" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="p_merge_DI" bpmnElement="p_merge">
+        <dc:Bounds x="315.0" y="150.0" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="265.0" y="208.0" width="150" height="42" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="p_split_DI" bpmnElement="p_split">
+        <dc:Bounds x="495.0" y="150.0" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="445.0" y="208.0" width="150" height="42" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="technical_DI" bpmnElement="technical">
+        <dc:Bounds x="550.0" y="297.0" width="180" height="76" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="p_manager_DI" bpmnElement="p_manager">
+        <dc:Bounds x="550.0" y="457.0" width="180" height="76" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="p_join_DI" bpmnElement="p_join">
+        <dc:Bounds x="925.0" y="150.0" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="875.0" y="208.0" width="150" height="42" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="p_ok_DI" bpmnElement="p_ok">
+        <dc:Bounds x="1155.0" y="150.0" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1105.0" y="208.0" width="150" height="42" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="p_end_DI" bpmnElement="p_end">
+        <dc:Bounds x="1482.0" y="157.0" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1432.0" y="201.0" width="136" height="42" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="p_fix_DI" bpmnElement="p_fix">
+        <dc:Bounds x="1090.0" y="617.0" width="180" height="76" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="contracts-parallel_F1_DI" bpmnElement="contracts-parallel_F1">
+        <di:waypoint x="158.0" y="175.0" />
+        <di:waypoint x="315.0" y="175.0" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="contracts-parallel_F2_DI" bpmnElement="contracts-parallel_F2">
+        <di:waypoint x="365.0" y="175.0" />
+        <di:waypoint x="495.0" y="175.0" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="contracts-parallel_F3_DI" bpmnElement="contracts-parallel_F3">
+        <di:waypoint x="545.0" y="175.0" />
+        <di:waypoint x="547.5" y="175.0" />
+        <di:waypoint x="547.5" y="335.0" />
+        <di:waypoint x="550.0" y="335.0" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="contracts-parallel_F4_DI" bpmnElement="contracts-parallel_F4">
+        <di:waypoint x="545.0" y="175.0" />
+        <di:waypoint x="547.5" y="175.0" />
+        <di:waypoint x="547.5" y="495.0" />
+        <di:waypoint x="550.0" y="495.0" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="contracts-parallel_F5_DI" bpmnElement="contracts-parallel_F5">
+        <di:waypoint x="730.0" y="335.0" />
+        <di:waypoint x="827.5" y="335.0" />
+        <di:waypoint x="827.5" y="175.0" />
+        <di:waypoint x="925.0" y="175.0" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="contracts-parallel_F6_DI" bpmnElement="contracts-parallel_F6">
+        <di:waypoint x="730.0" y="495.0" />
+        <di:waypoint x="827.5" y="495.0" />
+        <di:waypoint x="827.5" y="175.0" />
+        <di:waypoint x="925.0" y="175.0" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="contracts-parallel_F7_DI" bpmnElement="contracts-parallel_F7">
+        <di:waypoint x="975.0" y="175.0" />
+        <di:waypoint x="1155.0" y="175.0" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="contracts-parallel_F8_DI" bpmnElement="contracts-parallel_F8">
+        <di:waypoint x="1205.0" y="175.0" />
+        <di:waypoint x="1482.0" y="175.0" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1208.0" y="149.0" width="120" height="24" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="contracts-parallel_F9_DI" bpmnElement="contracts-parallel_F9">
+        <di:waypoint x="1180" y="200" />
+        <di:waypoint x="1180" y="617" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1183" y="174" width="120" height="24" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="contracts-parallel_F10_DI" bpmnElement="contracts-parallel_F10">
+        <di:waypoint x="1090" y="655" />
+        <di:waypoint x="220" y="655" />
+        <di:waypoint x="220" y="175" />
+        <di:waypoint x="315" y="175" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
